@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Explorer Journey</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fade-in 0.5s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="font-sans text-slate-800">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Icons (Inline for portability) ---
+        const Icon = ({ children, className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {children}
+            </svg>
+        );
+
+        const MapIcon = ({ className }) => <Icon className={className}><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></Icon>;
+        const RadioIcon = ({ className }) => <Icon className={className}><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></Icon>;
+        const GlobeIcon = ({ className }) => <Icon className={className}><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"></path></Icon>;
+        const ServerIcon = ({ className }) => <Icon className={className}><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></Icon>;
+        const ArrowRightIcon = ({ className }) => <Icon className={className}><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></Icon>;
+        const SearchIcon = ({ className }) => <Icon className={className}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></Icon>;
+        const ShieldAlertIcon = ({ className }) => <Icon className={className}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></Icon>;
+        const CheckCircleIcon = ({ className }) => <Icon className={className}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></Icon>;
+        const RefreshCwIcon = ({ className }) => <Icon className={className}><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></Icon>;
+        const WifiIcon = ({ className }) => <Icon className={className}><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></Icon>;
+        const InfoIcon = ({ className }) => <Icon className={className}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></Icon>;
+        const ExternalLinkIcon = ({ className }) => <Icon className={className}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></Icon>;
+
+        // --- Main App Component ---
+        const App = () => {
+            const [currentPhase, setCurrentPhase] = useState('intro'); // intro, dhcp, lease, dns, quiz, victory
+            const [backpack, setBackpack] = useState({
+                ip: '0.0.0.0',
+                subnet: 'Empty',
+                gateway: 'Empty',
+                dns: 'Empty'
+            });
+            const [doraStep, setDoraStep] = useState(0);
+            const [dhcpMessages, setDhcpMessages] = useState([]);
+            const [dnsStep, setDnsStep] = useState(0);
+            const [quizScore, setQuizScore] = useState(0);
+            const [showBackpack, setShowBackpack] = useState(false);
+            // NEW: State to control backpack animation
+            const [isBackpackGlowing, setIsBackpackGlowing] = useState(false);
+
+            // Audio Helper
+            const playAudio = (filename) => {
+                const audio = new Audio(filename);
+                audio.play().catch(err => console.log("Audio play failed:", err));
+            };
+
+            // Animation delays helper
+            const addMessage = (msg) => {
+                setDhcpMessages(prev => [...prev, msg]);
+            };
+
+            // Phase 1: DHCP Logic
+            const handleDoraClick = (step) => {
+                if (step !== doraStep) return;
+                
+                if (step === 0) {
+                    addMessage({ type: 'client', text: 'DISCOVER: "Hola! Is there a DHCP Server out there?" (Broadcast 255.255.255.255)' });
+                    setDoraStep(1);
+                } else if (step === 1) {
+                    addMessage({ type: 'server', text: 'OFFER: "I found you! Here is an IP: 192.168.1.101"' });
+                    setDoraStep(2);
+                } else if (step === 2) {
+                    addMessage({ type: 'client', text: 'REQUEST: "I would like to keep this IP, please!"' });
+                    setDoraStep(3);
+                } else if (step === 3) {
+                    addMessage({ type: 'server', text: 'ACKNOWLEDGE: "It is yours! Here is your Subnet Mask and Gateway too."' });
+                    setBackpack({
+                        ip: '192.168.1.101',
+                        subnet: '255.255.255.0',
+                        gateway: '192.168.1.1',
+                        dns: '8.8.8.8'
+                    });
+                    setDoraStep(4);
+                    // GLOW TRIGGER: After getting IP
+                    setIsBackpackGlowing(true);
+                }
+            };
+
+            // Phase 3: DNS Logic
+            const dnsSteps = [
+                { title: "Your Computer", desc: "I need the IP for google.com! I will ask my configured DNS Server (usually the Router).", icon: <RadioIcon className="w-6 h-6 text-blue-500" /> },
+                { title: "Recursive Resolver (ISP)", desc: "I don't know it, but I can find out! I'll start at the top.", icon: <SearchIcon className="w-6 h-6 text-blue-500" /> },
+                { title: "Root Server (.)", desc: "I don't know 'google.com', but I know where '.com' lives!", icon: <ServerIcon className="w-6 h-6 text-purple-500" /> },
+                { title: "TLD Server (.com)", desc: "I know where 'google' is registered!", icon: <ServerIcon className="w-6 h-6 text-orange-500" /> },
+                { title: "Authoritative Server", desc: "Here is the A Record: 142.250.190.46", icon: <CheckCircleIcon className="w-6 h-6 text-green-500" /> }
+            ];
+
+            return (
+                <div 
+                    className="min-h-screen overflow-x-hidden bg-gradient-to-b from-sky-200 to-green-100"
+                    style={{
+                        backgroundImage: "url('mapbackground.jpg')",
+                        backgroundSize: "cover",
+                        backgroundAttachment: "fixed"
+                    }}
+                >
+                {/* Header */}
+                <header className="bg-purple-600 text-white p-4 shadow-lg sticky top-0 z-50">
+                    <div className="max-w-4xl mx-auto flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                        <GlobeIcon className="w-8 h-8 animate-pulse" />
+                        <h1 className="text-2xl font-bold tracking-wider">Dora the Network Explorer</h1>
+                    </div>
+                    <button 
+                        onClick={() => {
+                            playAudio('backpack.mp3');
+                            setShowBackpack(!showBackpack);
+                            // STOP GLOW on click
+                            setIsBackpackGlowing(false);
+                        }}
+                        className={`flex items-center gap-2 bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-full font-bold transition-all hover:scale-105 ${isBackpackGlowing ? 'animate-bounce ring-4 ring-yellow-300 shadow-[0_0_15px_rgba(253,224,71,0.8)]' : ''}`}
+                    >
+                        <img src="backpack.gif" alt="Backpack" className="w-8 h-8" onError={(e) => {e.target.onerror = null; e.target.style.display = 'none';}} />
+                        Backpack
+                    </button>
+                    </div>
+                </header>
+
+                {/* Backpack Modal */}
+                {showBackpack && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowBackpack(false)}>
+                    <div className="bg-purple-100 p-6 rounded-3xl max-w-md w-full border-4 border-purple-500 shadow-2xl relative" onClick={e => e.stopPropagation()}>
+                        <h2 className="text-2xl font-bold text-purple-700 mb-4 flex items-center gap-2">
+                        <img src="backpack.gif" alt="Backpack" className="w-8 h-8" /> The Configuration Backpack
+                        </h2>
+                        <p className="mb-4 text-sm text-slate-600">To travel the network, we need all these items!</p>
+                        
+                        <div className="space-y-3">
+                        <div className={`p-3 rounded-xl border-2 ${backpack.ip !== '0.0.0.0' ? 'bg-green-100 border-green-400' : 'bg-gray-200 border-gray-300 dashed'}`}>
+                            <div className="text-xs uppercase font-bold text-gray-500">Unique Identifier</div>
+                            <div className="font-mono font-bold text-lg">IP: {backpack.ip}</div>
+                        </div>
+                        
+                        <div className={`p-3 rounded-xl border-2 ${backpack.subnet !== 'Empty' ? 'bg-blue-100 border-blue-400' : 'bg-gray-200 border-gray-300 dashed'}`}>
+                            <div className="text-xs uppercase font-bold text-gray-500">Subnet Mask</div>
+                            <div className="font-mono font-bold">{backpack.subnet}</div>
+                            <div className="text-xs text-gray-500 italic">Defines our local neighborhood</div>
+                        </div>
+
+                        <div className={`p-3 rounded-xl border-2 ${backpack.gateway !== 'Empty' ? 'bg-orange-100 border-orange-400' : 'bg-gray-200 border-gray-300 dashed'}`}>
+                            <div className="text-xs uppercase font-bold text-gray-500">Default Gateway</div>
+                            <div className="font-mono font-bold">{backpack.gateway}</div>
+                            <div className="text-xs text-gray-500 italic">The door to the outside world</div>
+                        </div>
+                        </div>
+                        
+                        <button 
+                        onClick={() => setShowBackpack(false)}
+                        className="mt-6 w-full bg-purple-600 text-white font-bold py-2 rounded-xl"
+                        >
+                        Close Backpack
+                        </button>
+                    </div>
+                    </div>
+                )}
+
+                {/* Main Content Area */}
+                <main className="max-w-3xl mx-auto p-4 mt-4 pb-20">
+                    
+                    {/* PHASE: INTRO */}
+                    {currentPhase === 'intro' && (
+                    <div className="bg-white rounded-3xl shadow-xl overflow-hidden animate-fade-in">
+                        <div className="bg-purple-600 p-6 text-white text-center">
+                            <div className="flex justify-center items-center gap-4 mb-4">
+                                {/* Dora Image Added Here */}
+                                <img src="dora.gif" alt="Explorer" className="w-24 h-24 object-contain" onError={(e) => {e.target.onerror = null; e.target.style.display = 'none';}} />
+                                <h2 className="text-3xl font-bold mb-2">Hola! I'm Dora the Explorer!</h2>
+                            </div>
+                        </div>
+                        <div className="p-8 text-center">
+                        <p className="text-xl mb-6 text-slate-600">
+                            We want to go to the <strong>abuelashouse.com</strong>, but we can't go there yet unless we have an <strong>IP address! </strong>
+                            A brand new device doesn't needs to find a way to get an IP address first!
+                        </p>
+                        <p className="text-lg mb-8 text-slate-600">
+                            We need to find the Map Server (DHCP) to get our address. Can you help me?
+                        </p>
+                        <button 
+                            onClick={() => {
+                                playAudio('vamanos-doit.mp3');
+                                setCurrentPhase('dhcp');
+                                // GLOW TRIGGER: Enter DHCP Forest
+                                setIsBackpackGlowing(true);
+                            }}
+                            className="bg-orange-500 hover:bg-orange-600 text-white text-xl font-bold px-8 py-4 rounded-full shadow-lg transform hover:scale-110 transition-all flex items-center gap-2 mx-auto"
+                        >
+                            Let's Go! <ArrowRightIcon />
+                        </button>
+                        </div>
+                    </div>
+                    )}
+
+                    {/* PHASE: DHCP (DORA) */}
+                    {currentPhase === 'dhcp' && (
+                    <div className="space-y-6">
+                        <div className="bg-white p-6 rounded-3xl shadow-xl border-b-8 border-purple-200">
+                        <h2 className="text-2xl font-bold text-purple-700 mb-4">The DHCP Forest</h2>
+                        <p className="text-slate-600 mb-4">
+                            We are lost in the forest of the internet! We need an IP Address to be automatically assigned to us by a special process. 
+                            Remember, to start this process all you need to do is spell my name!  Can you spell my name?: <span className="font-bold text-orange-600">D.O.R.A.</span>
+                        </p>
+                        
+                        {/* Progress Bar */}
+                        <div className="flex justify-between mb-8 relative">
+                            <div className="absolute top-1/2 left-0 w-full h-2 bg-gray-200 -z-10 rounded-full"></div>
+                            {['D', 'O', 'R', 'A'].map((letter, idx) => (
+                            <div key={letter} className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-xl transition-colors duration-500 ${doraStep > idx ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-500'}`}>
+                                {letter}
+                            </div>
+                            ))}
+                        </div>
+
+                        {/* Interaction Area */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div className="bg-sky-50 p-4 rounded-2xl border-2 border-sky-200">
+                            <h3 className="font-bold text-sky-700 flex items-center gap-2"><RadioIcon className="w-4 h-4" /> Client (Us)</h3>
+                            <div className="min-h-[100px] flex flex-col justify-center items-center gap-2">
+                                {doraStep === 0 && (
+                                <button onClick={() => handleDoraClick(0)} className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-full animate-bounce">
+                                    Shout "DISCOVER!"
+                                </button>
+                                )}
+                                {doraStep === 2 && (
+                                <button onClick={() => handleDoraClick(2)} className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-full animate-bounce">
+                                    Send "REQUEST"
+                                </button>
+                                )}
+                                {doraStep === 4 && (
+                                <div className="text-green-600 font-bold flex flex-col items-center">
+                                    <CheckCircleIcon className="w-8 h-8" />
+                                    <span>We have an IP!</span>
+                                </div>
+                                )}
+                            </div>
+                            </div>
+                            
+                            <div className="bg-indigo-50 p-4 rounded-2xl border-2 border-indigo-200">
+                            <h3 className="font-bold text-indigo-700 flex items-center gap-2"><ServerIcon className="w-4 h-4" /> DHCP Server</h3>
+                            <div className="min-h-[100px] flex flex-col justify-center items-center">
+                                {doraStep === 1 && (
+                                <button onClick={() => handleDoraClick(1)} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-full animate-pulse">
+                                    Send "OFFER"
+                                </button>
+                                )}
+                                {doraStep === 3 && (
+                                <button onClick={() => handleDoraClick(3)} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-full animate-pulse">
+                                    Send "ACKNOWLEDGE"
+                                </button>
+                                )}
+                            </div>
+                            </div>
+                        </div>
+
+                        {/* Message Log */}
+                        <div className="bg-slate-800 text-green-400 font-mono p-4 rounded-xl text-sm h-40 overflow-y-auto mb-6">
+                            {dhcpMessages.map((msg, i) => (
+                            <div key={i} className="mb-2 border-b border-slate-700 pb-1">
+                                <span className="font-bold text-yellow-400">[{msg.type.toUpperCase()}]</span> {msg.text}
+                            </div>
+                            ))}
+                            {dhcpMessages.length === 0 && <span className="text-slate-500 italic">Waiting for network traffic...</span>}
+                        </div>
+
+                        {/* Info Block: Where is the Server? */}
+                        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded shadow-sm">
+                            <h3 className="font-bold text-blue-800 flex items-center gap-2 mb-2">
+                                <InfoIcon className="w-5 h-5" /> Explorer Note: Where is this Server?
+                            </h3>
+                            <div className="text-sm text-blue-800 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div>
+                                    <strong>At Home:</strong><br/>
+                                    Your WiFi Router is usually the DHCP Server giving IPs to your phone & laptop.
+                                </div>
+                                <div>
+                                    <strong>At School:</strong><br/>
+                                    Big, dedicated servers in a closet run DHCP to manage thousands of students.
+                                </div>
+                                <div>
+                                    <strong>The ISP:</strong><br/>
+                                    Your ISP has a giant DHCP server that gives your home router its main Public IP.
+                                </div>
+                            </div>
+                        </div>
+
+                        </div>
+
+                        {doraStep === 4 && (
+                        <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded shadow-md animate-fade-in">
+                            <h3 className="font-bold text-yellow-800 flex items-center gap-2">
+                            <ShieldAlertIcon className="w-5 h-5" /> Wait! Look at how faraway the forests are!
+                            </h3>
+                            <p className="text-sm text-yellow-800 mt-1">
+                            Sometimes another DHCP server is so far away (across a river and through the woods) that it cannot hear a client shout <strong>from a completely different network.</strong> So we need a <strong>relay agent</strong> to help carry the message.
+                            </p>
+                        </div>
+                        )}
+
+                        {doraStep === 4 && (
+                        <button 
+                            onClick={() => {
+                                playAudio('im_the_map.mp3');
+                                setCurrentPhase('lease');
+                            }}
+                            className="w-full bg-green-500 hover:bg-green-600 text-white text-xl font-bold py-4 rounded-2xl shadow-lg transition-transform hover:translate-y-[-2px] flex justify-center items-center gap-2"
+                        >
+                            Next: Keep the Map! <ArrowRightIcon />
+                        </button>
+                        )}
+                    </div>
+                    )}
+
+                    {/* PHASE: LEASE */}
+                    {currentPhase === 'lease' && (
+                    <div className="bg-white p-6 rounded-3xl shadow-xl">
+                        <h2 className="text-2xl font-bold text-purple-700 mb-4">The Clock is Ticking! (Lease)</h2>
+                        <p className="text-slate-600 mb-6">
+                        The DHCP Server didn't give us the IP forever. It's just a rental, called a <strong>Lease</strong>.
+                        If we don't renew it, we lose it!
+                        </p>
+
+                        <div className="flex flex-col items-center gap-6 mb-8">
+                        <div className="w-full bg-gray-200 rounded-full h-8 relative overflow-hidden">
+                            <div className="bg-orange-500 h-full w-1/2 animate-pulse flex items-center justify-center text-xs font-bold text-white">
+                            50% Time - RENEW NOW!
+                            </div>
+                        </div>
+                        <div className="text-center text-sm text-slate-500">
+                            When the timer hits 50%, the client asks nicely to keep the address. This is <strong>Renewal</strong>.
+                            If we leave the network properly, we <strong>Release</strong> the address so someone else can use it.
+                        </div>
+                        </div>
+
+                        <button 
+                        onClick={() => setCurrentPhase('dns')}
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white text-xl font-bold py-4 rounded-2xl shadow-lg flex justify-center items-center gap-2"
+                        >
+                        Let's Find the Destination (DNS) <ArrowRightIcon />
+                        </button>
+                    </div>
+                    )}
+
+                    {/* PHASE: DNS */}
+                    {currentPhase === 'dns' && (
+                    <div className="bg-white p-6 rounded-3xl shadow-xl">
+                        <h2 className="text-2xl font-bold text-purple-700 mb-4">The Mountain of Names (DNS)</h2>
+                        <p className="text-slate-600 mb-6">
+                        We have our IP, but now we want to visit <strong>www.google.com</strong>. 
+                        Computers only speak numbers (IPs). We need the <strong>DNS (Domain Name System)</strong> to translate the name!
+                        </p>
+
+                        <div className="bg-slate-900 p-4 rounded-xl mb-6 flex items-center gap-2">
+                        <span className="text-green-400 font-mono">{`>`} ping www.google.com</span>
+                        <span className="animate-ping w-2 h-2 bg-green-500 rounded-full ml-2"></span>
+                        </div>
+
+                        {/* Info Block: DNS Locations */}
+                        <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded shadow-sm mb-6">
+                            <h3 className="font-bold text-purple-800 flex items-center gap-2 mb-2">
+                                <InfoIcon className="w-5 h-5" /> Explorer Note: The Chain of Command
+                            </h3>
+                            <p className="text-sm text-purple-800">
+                                Where are these servers? Usually, your computer asks your <strong>Home Router</strong> first. 
+                                Your router acts as a messenger and asks your <strong>ISP's DNS Servers</strong>. 
+                                If they don't know, they ask the <strong>Internet Root Servers</strong>!
+                            </p>
+                        </div>
+
+                        <div className="space-y-4 mb-8">
+                        {dnsSteps.map((step, idx) => (
+                            <div 
+                            key={idx} 
+                            className={`p-4 rounded-xl border-2 transition-all duration-500 flex items-center gap-4 
+                                ${dnsStep >= idx ? 'opacity-100 translate-x-0' : 'opacity-50 translate-x-10'}
+                                ${dnsStep === idx ? 'bg-yellow-50 border-yellow-400 scale-105 shadow-md' : 'bg-white border-gray-100'}
+                            `}
+                            >
+                            <div className="bg-white p-2 rounded-full shadow-sm border border-gray-200">
+                                {step.icon}
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-slate-800">{step.title}</h4>
+                                <p className="text-sm text-slate-600">{step.desc}</p>
+                                {/* Add Map Link specifically for Root Server Step */}
+                                {step.title.includes("Root Server") && dnsStep >= idx && (
+                                    <a href="https://root-servers.org/" target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200 transition-colors">
+                                        <ExternalLinkIcon className="w-3 h-3" /> View Real World Map
+                                    </a>
+                                )}
+                            </div>
+                            </div>
+                        ))}
+                        </div>
+
+                        <div className="flex justify-center">
+                        {dnsStep < dnsSteps.length ? (
+                            <button 
+                            onClick={() => setDnsStep(prev => prev + 1)}
+                            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-full shadow-lg flex items-center gap-2"
+                            >
+                            Ask the Next Server <SearchIcon className="w-4 h-4" />
+                            </button>
+                        ) : (
+                            <div className="text-center animate-bounce">
+                            <p className="text-green-600 font-bold mb-4">Address Found! 142.250.190.46</p>
+                            <button 
+                                onClick={() => {
+                                    playAudio('ohh_mann.mp3');
+                                    setCurrentPhase('quiz');
+                                }}
+                                className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-full shadow-lg"
+                            >
+                                Watch out for Swiper! (Quiz)
+                            </button>
+                            </div>
+                        )}
+                        </div>
+                    </div>
+                    )}
+
+                    {/* PHASE: QUIZ */}
+                    {currentPhase === 'quiz' && (
+                    <div className="bg-white p-6 rounded-3xl shadow-xl border-4 border-orange-500">
+                        <div className="text-center mb-6">
+                        <div className="flex items-center justify-center gap-4 mb-2">
+                            {/* Swiper Image Added Here */}
+                            <img src="swiper.png" alt="Swiper" className="w-24 h-24 object-contain" onError={(e) => {e.target.onerror = null; e.target.style.display = 'none';}} />
+                            <ShieldAlertIcon className="w-16 h-16 text-orange-500" />
+                        </div>
+                        <h2 className="text-3xl font-bold text-orange-600">Swiper is Swiping Packets!</h2>
+                        <p className="text-slate-600">Answer correctly to say "Swiper No Swiping!"</p>
+                        </div>
+
+                        <div className="space-y-4">
+                        {[
+                            { q: "What protocol gives us an IP address automatically?", a: "DHCP", options: ["DNS", "DHCP", "NFC"] },
+                            { q: "If the server is on a different network, who helps our broadcast?", a: "Relay Agent", options: ["Relay Agent", "Root Server", "Switch"] },
+                            { q: "Which DNS record is for an IPv4 address?", a: "A Record", options: ["MX Record", "AAAA Record", "A Record"] }
+                        ].map((item, idx) => (
+                            <div key={idx} className="p-4 bg-slate-50 rounded-xl">
+                            <p className="font-bold mb-3">{idx + 1}. {item.q}</p>
+                            <div className="flex gap-2">
+                                {item.options.map(opt => (
+                                <button 
+                                    key={opt}
+                                    onClick={(e) => {
+                                    if (opt === item.a) {
+                                        e.target.classList.add('bg-green-500', 'text-white');
+                                        e.target.textContent = "Correct!";
+                                        setQuizScore(prev => prev + 1);
+                                    } else {
+                                        e.target.classList.add('bg-red-500', 'text-white');
+                                        e.target.textContent = "Oh no!";
+                                    }
+                                    }}
+                                    className="flex-1 border-2 border-gray-200 py-2 rounded-lg hover:bg-purple-50 font-semibold transition-colors"
+                                >
+                                    {opt}
+                                </button>
+                                ))}
+                            </div>
+                            </div>
+                        ))}
+                        </div>
+
+                        {quizScore >= 3 && (
+                        <div className="mt-8 text-center animate-fade-in">
+                            <h3 className="text-2xl font-bold text-purple-700 mb-4">We did it!</h3>
+                            <button 
+                            onClick={() => {
+                                playAudio('dora_fiesta_trio.mp3');
+                                setCurrentPhase('victory');
+                            }}
+                            className="bg-green-500 hover:bg-green-600 text-white text-xl font-bold px-8 py-4 rounded-full shadow-lg"
+                            >
+                            Go to the Party!
+                            </button>
+                        </div>
+                        )}
+                    </div>
+                    )}
+
+                    {/* PHASE: VICTORY (Updated with extra buttons) */}
+                    {currentPhase === 'victory' && (
+                    <div className="text-center pt-10 animate-fade-in pb-10">
+                        <div className="bg-white p-8 rounded-full inline-block mb-6 shadow-2xl">
+                        <WifiIcon className="w-32 h-32 text-green-500 animate-pulse" />
+                        </div>
+                        <h1 className="text-4xl font-bold text-white mb-4 drop-shadow-md">Connected!</h1>
+                        <p className="text-xl text-purple-900 font-medium max-w-md mx-auto mb-8">
+                        We used DHCP to get an ID, maintained our Lease, and used DNS to find the way. Now we are surfing the web!
+                        </p>
+                        
+                        <div className="flex flex-col items-center gap-6">
+                            <button 
+                                onClick={() => window.location.reload()}
+                                className="bg-white text-purple-600 hover:bg-gray-100 font-bold py-3 px-8 rounded-full shadow-lg flex items-center gap-2 mx-auto"
+                            >
+                                <RefreshCwIcon className="w-5 h-5" /> Start Over
+                            </button>
+
+                            {/* New Button 1: In-depth */}
+                            <div className="bg-white/80 p-4 rounded-xl max-w-sm">
+                                <p className="text-sm text-purple-900 mb-2 italic">This button will direct you to content that dives deeper into what you've learned and have an opportunity to test your knowledge.</p>
+                                <button 
+                                    onClick={() => window.location.href = '../morepractice/indepth.html'}
+                                    className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-full shadow-lg"
+                                >
+                                    Go In-Depth
+                                </button>
+                            </div>
+
+                            {/* New Button 2: Back to Index */}
+                            <div className="bg-white/80 p-4 rounded-xl max-w-sm">
+                                <p className="text-sm text-purple-900 mb-2 italic">This button will take you back to reading 'Dora's Network Adventure'</p>
+                                <button 
+                                    onClick={() => window.location.href = '../index.html'}
+                                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-full shadow-lg"
+                                >
+                                    Back to Adventure Book
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    )}
+
+                </main>
+
+                {/* Footer / Glossary */}
+                <footer className="bg-slate-800 text-slate-300 p-8 mt-12">
+                    <div className="max-w-4xl mx-auto">
+                    <h3 className="text-xl font-bold text-white mb-4">Explorer's Field Guide (Glossary)</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                        <div>
+                        <strong className="text-orange-400">DHCP (Dynamic Host Configuration Protocol):</strong>
+                        <p>The automatic process of assigning IP addresses. Uses UDP ports 67/68.</p>
+                        </div>
+                        <div>
+                        <strong className="text-orange-400">D.O.R.A.:</strong>
+                        <p>Discover, Offer, Request, Acknowledge. The 4 steps to get an IP.</p>
+                        </div>
+                        <div>
+                        <strong className="text-orange-400">DNS (Domain Name System):</strong>
+                        <p>Translates human names (google.com) to IP addresses (142.250...). Uses Port 53.</p>
+                        </div>
+                        <div>
+                        <strong className="text-orange-400">Subnet Mask:</strong>
+                        <p>Tells the computer which part of the IP is the network and which is the device.</p>
+                        </div>
+                        <div>
+                        <strong className="text-orange-400">IPv4 vs IPv6:</strong>
+                        <p>IPv4 has 32-bits (short numbers). IPv6 has 128-bits (really long numbers) because we ran out of IPv4 addresses!</p>
+                        </div>
+                        <div>
+                        <strong className="text-orange-400">Reservation:</strong>
+                        <p>When the server remembers your MAC address and always gives you the same IP (VIP access).</p>
+                        </div>
+                    </div>
+                    </div>
+                </footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

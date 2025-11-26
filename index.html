@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dora's Network Adventure</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Comic Neue', cursive;
+            /* Updated background to use background.png */
+            background-image: url('background.png'); 
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            overflow-x: hidden;
+        }
+        
+        /* Book Effect */
+        .book-container {
+            perspective: 1500px;
+        }
+        
+        .book {
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.645, 0.045, 0.355, 1);
+            box-shadow: 0 20px 30px rgba(0,0,0,0.3);
+        }
+
+        .page-enter {
+            animation: flipIn 0.8s ease-in-out forwards;
+        }
+
+        @keyframes flipIn {
+            0% {
+                opacity: 0;
+                transform: rotateY(-90deg);
+            }
+            100% {
+                opacity: 1;
+                transform: rotateY(0deg);
+            }
+        }
+
+        /* Backpack Colors */
+        .dora-purple { color: #6B4C9A; }
+        .dora-pink { color: #D65A8D; }
+        .dora-orange { color: #E77A1E; }
+
+        /* Shake Animation for Wrong Answers */
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        /* Custom Scrollbar for book content */
+        .book-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        .book-content::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+            border-radius: 4px;
+        }
+        .book-content::-webkit-scrollbar-thumb {
+            background: #D65A8D; 
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- Data & Script ---
+        const STORY_STEPS = [
+            {
+                id: 0,
+                title: "Dora the Explorer’s Network Adventure",
+                image: "dora1.jpg",
+                text: "¡Hola! Soy Dora! Today we’re going on a super-special adventure inside… the internet! Do you like adventures?",
+                type: "input",
+                checkAnswer: (val) => {
+                    const v = val.toLowerCase().trim();
+                    if (v === "yes") return { correct: true, msg: "¡Excelente! And guess who’s coming with us? Backpack, map and you!" };
+                    return { correct: true, msg: "You’re so funny! You don’t have a choice! Guess who’s coming with us? Backpack! Map! And YOU!" }; // Proceed regardless
+                }
+            },
+            {
+                id: 1,
+                title: "Our Helpers",
+                image: "helpers.png",
+                text: "We’re going to explore two amazing helpers that work behind the scenes every time you go online. Even though you can’t see them… they help you every single day! Can you say DHCP and DNS?",
+                type: "input",
+                strict: true, // Must be correct to proceed
+                checkAnswer: (val) => {
+                    const v = val.toLowerCase().trim();
+                    const valid = ["dhcp and dns", "dhcp dns"];
+                    if (valid.includes(v)) return { correct: true, msg: "¡Muy bien!" };
+                    return { correct: false, msg: "Listen kid… I'm the boss, soy la Jefa! We’re going on a network adventure whether you like it or not! So you better answer ‘DHCP and DNS’ right now!" };
+                }
+            },
+            {
+                id: 2,
+                title: "Part 1: Getting an Identity — Meeting DHCP!",
+                image: "dora2.jpg",
+                text: "When you tap the Wi-Fi button on your tablet or phone— ¡poof! —you’re online! Looks like magic, right? But it’s not magic… It’s an invisible conversation happening SUPER fast between your device and the network.",
+                subText: "Boots: Dora, why does the device need to talk first?\n\nDora: Because every device needs an identity—a special and unique number so the network knows who it is. Do you know what this special number is called?",
+                type: "input",
+                checkAnswer: (val) => {
+                    const v = val.toLowerCase().trim();
+                    if (v === "ip address") return { correct: true, msg: "¡Perfecto!" };
+                    return { correct: true, msg: "I'm going to pretend that you said the correct answer.... it’s called an IP address! ¡Muy bien! " };
+                }
+            },
+            {
+                id: 3,
+                title: "Meeting DHCP",
+                image: "dora3.jpg",
+                text: "And now our first helper appears….DHCP! Can you say D-H-C-P?",
+                type: "input",
+                checkAnswer: (val) => {
+                    const v = val.toLowerCase().trim();
+                    if (v === "dhcp") return { correct: true, msg: "¡Muy bien!" };
+                    return { correct: true, msg: "¡Estoy muy enojada! I am very angry!… I think you like teasing me!! I’ll let it go this time…" };
+                }
+            },
+            {
+                id: 4,
+                title: "What is DHCP?",
+                image: "dora4.jpg",
+                text: "DHCP means Dynamic Host Configuration Protocol. Its job? To give every device a special IP address automatically, so people don’t have to type them in one by one. That would take for-ev-er!",
+                type: "info"
+            },
+            {
+                id: 5,
+                title: "DORA! The Four-Step Dance",
+                image: "dance.png",
+                text: "And guess what? DHCP uses a four-step conversation that spells… D-O-R-A! Just like me, Dora! ¡Qué coincidencia! Let’s say the steps juntos:",
+                list: ["Discover", "Offer", "Request", "Acknowledge"],
+                subText: "Let’s explore them!",
+                type: "info"
+            },
+            {
+                id: 6,
+                title: "Discover",
+                image: "dora5.jpg",
+                text: "Your device doesn’t have an identity yet, so it calls out ‘¡Hola! Is there a DHCP server out there? I need an address!’ and then it sends this message from 0.0.0.0—because it doesn’t have a real address yet! It’s a blank slate.",
+                type: "info"
+            },
+            {
+                id: 7,
+                title: "Offer",
+                image: "dora6.jpg",
+                text: "The DHCP server hears the shout and says ‘¡Aquí! I have an IP address for you!’ Sometimes, if a device always needs the same address—like a printer—the server can keep a reservation for it.",
+                type: "info"
+            },
+            {
+                id: 8,
+                title: "Request",
+                image: "dora6.jpg",
+                text: "After DHCP offers an IP Address, your device answers ‘Sí, por favor! I want THAT one!’",
+                type: "info"
+            },
+            {
+                id: 9,
+                title: "Acknowledge",
+                image: "dora7.jpg",
+                text: "The server says ‘Approved! You’re official now.’ And now your device has its own special digital ID!",
+                type: "info"
+            },
+            {
+                id: 10,
+                title: "But Wait… The Lease!",
+                image: "dora8.jpg",
+                text: "DHCP doesn’t give addresses forever. Do you know what is called when DHCP gives you a little chunk of time to use that address?",
+                type: "input",
+                checkAnswer: (val) => {
+                    const v = val.toLowerCase().trim();
+                    if (v === "lease") return { correct: true, msg: "¡Muy bien! And when the lease reaches the halfway point— 50% —your device asks ‘Can I renew, por favor?’ And the DHCP server resets the clock so your connection stays smooth. ¡Qué inteligente!" };
+                    return { correct: true, msg: "That’s okay if you don’t know. I won’t judge you like Boots or Backpack does. The answer is lease! And when the lease reaches the halfway point— 50% —your device says ‘ Can I renew, por favor?’ And the DHCP server resets the clock so your connection stays smooth. ¡Qué inteligente!" };
+                }
+            },
+            {
+                id: 11,
+                title: "Part 2: Finding the Website — Let’s Meet DNS!",
+                image: "dora9.jpg",
+                text: "Now your device knows who it is. But how does it find where it wants to go? Like google.com or abuelashouse.com We need our second helper… DNS! The Domain Name System!",
+                subText: "If DHCP gives your device an ID, then DNS gives it a map! Map says 'To find a website, first go to the Root Server, then the TLD Server, then the Authoritative Server!'\n\nLet’s say it together!",
+                type: "sequence_buttons",
+                buttons: ["Root Server", "TLD Server", "Authoritative Server"]
+            },
+            {
+                id: 12,
+                title: "Root Server",
+                image: "dora10.jpg",
+                text: "The search for a website starts at the very top! The root doesn’t know the exact answer…but it knows who handles all the top level domains like .com or .org. The root server provides directions to the correct TLD server.",
+                type: "info"
+            },
+            {
+                id: 13,
+                title: "TLD Server",
+                image: "dora11.jpg",
+                text: "TLD servers maintain information for all the domain names that share a common domain extension. In other words, it manages and provides the specific IP addresses for all domain names that share a common extension, such as .com, .org, or .net. The TLD server says ‘Let's go ask the server that’s in charge of that exact website!’",
+                subText: "Do you know what TLD stands for?",
+                type: "input",
+                checkAnswer: (val) => {
+                    const v = val.toLowerCase().trim();
+                    if (v === "top level domain") return { correct: true, msg: "¡Excelente!" };
+                    return { correct: true, msg: "Oh no! Boots and Backpack are making fun of you! Pobrecito, don’t cry! The answer is Top Level Domain" };
+                }
+            },
+            {
+                id: 14,
+                title: "Authoritative Server",
+                image: "dora12.jpg",
+                text: "This server holds the definitive, up-to-date information for a specific domain and directly answers questions about it, such as its IP address. It pretty much holds the phonebook with all of the specific information called a DNS Record!",
+                subText: "That phonebook has a variety of record types. Can you match the correct purpose to the correct record type?",
+                type: "matching",
+                matches: [
+                    { id: 'a', label: 'A Record', match: 'IPv4 address' },
+                    { id: 'aaaa', label: 'AAAA Record', match: 'IPv6 address' },
+                    { id: 'cname', label: 'CNAME', match: 'Alias for a domain name' },
+                    { id: 'mx', label: 'MX Record', match: 'email directions' }
+                ],
+                successMsg: "Depending on where you want to go, one of these records will give your device the exact coordinates it needs."
+            },
+            {
+                id: 15,
+                title: "Putting It All Together — ¡Vámonos!",
+                image: "dora13.jpg",
+                text: "Let’s remember the whole journey:\nDHCP gives your device its identity.\nDNS tells your device where the website lives.\nWith both addresses… ¡conexión hecha! The connection is made!",
+                subText: "And you know what's amazing? This whole adventure—DHCP talking, DNS searching, finding the destination— happens in just milliseconds! Every time you click a link. Every time you open an app. Every time you explore!",
+                type: "info"
+            },
+            {
+                id: 16,
+                title: "Oh no…do you hear…Swiper?",
+                image: "dora14.jpg",
+                soundStart: "swiper.mp3", // Plays twice
+                text: "Boots: Ohhh nooo! What happens if Swiper tries to steal DHCP and DNS?",
+                subText: "Dora: There would be no automatic connections, no easy browsing, and nothing would work!\n\nDora: We better stop Swiper!Can you say swiper no swiping? Say it with me!",
+                type: "input",
+                checkAnswer: (val) => {
+                    const v = val.toLowerCase().trim();
+                    if (v === "swiper no swiping") {
+                        return { correct: true, sound: "ohh_mann.mp3", msg: "Swiper says 'AAAhh man!'", msgTitle: "¡Lo logramos!" };
+                    }
+                    return { correct: true, msg: "I hope you’re not trying to help Swiper and resort to a life of crime!!!" };
+                }
+            },
+            {
+                id: 17,
+                title: "Conclusion",
+                image: "dora15.jpg",
+                text: "That was a close one, good job!! So next time you connect to the internet and try to go to a website, take a moment and say ‘Gracias, DHCP! Gracias, DNS!’ Because without them… We couldn’t explore the internet at all!",
+                type: "final",
+                // Updated buttons data for the final page
+                buttons: [
+                    {
+                        label: "Practice Adventure",
+                        link: "practice/practice.html",
+                        desc: "This button will direct you to a simple Dora adventure to practice what you've learned.",
+                        color: "bg-orange-500 hover:bg-orange-600 focus:ring-orange-600"
+                    },
+                    {
+                        label: "More in depth",
+                        link: "morepractice/indepth.html",
+                        desc: "This button will direct you to content that dives deeper into what you've learned and have an opportunity to test your knowledge.",
+                        color: "bg-purple-600 hover:bg-purple-700 focus:ring-purple-600"
+                    }
+                ]
+            }
+        ];
+
+        // --- Components ---
+
+        const AdventureBook = () => {
+            const [stepIndex, setStepIndex] = useState(0);
+            const [inputVal, setInputVal] = useState("");
+            const [feedback, setFeedback] = useState(null); // { text, type }
+            const [showNext, setShowNext] = useState(false);
+            const [flipClass, setFlipClass] = useState("page-enter");
+            
+            // Audio ref for Click sound - preloaded
+            const clickAudioRef = useRef(new Audio("click.mp3"));
+
+            // Other Audio refs
+            const swiperAudio = useRef(new Audio("swiper.mp3"));
+            
+            // Optimized Play Click: Reset time instead of creating new object for lower latency
+            const playClick = () => {
+                const audio = clickAudioRef.current;
+                audio.currentTime = 0; // Rewind
+                audio.play().catch(e => {
+                    // Silent catch for auto-play policy blocks if user hasn't interacted yet
+                    console.log("Audio play prevented:", e);
+                });
+            };
+
+            // Global click listener for sound
+            useEffect(() => {
+                // Preload trigger on first interaction
+                const enableAudio = () => {
+                    clickAudioRef.current.load();
+                    document.removeEventListener('click', enableAudio);
+                };
+                document.addEventListener('click', enableAudio);
+
+                // Add sound to all clicks
+                const globalClickHandler = () => playClick();
+                document.addEventListener('click', globalClickHandler);
+                return () => document.removeEventListener('click', globalClickHandler);
+            }, []);
+
+            // Effect when step changes
+            useEffect(() => {
+                setFlipClass(""); // Reset anim
+                setTimeout(() => setFlipClass("page-enter"), 10);
+                
+                setFeedback(null);
+                setShowNext(false);
+                setInputVal("");
+
+                // Specific Step Logic: Swiper Sound
+                const currentStep = STORY_STEPS[stepIndex];
+                if (currentStep.soundStart === "swiper.mp3") {
+                    setTimeout(() => {
+                        swiperAudio.current.play().catch(e => console.log(e));
+                        setTimeout(() => {
+                             swiperAudio.current.currentTime = 0;
+                             swiperAudio.current.play().catch(e => console.log(e));
+                        }, 2000);
+                    }, 500);
+                }
+            }, [stepIndex]);
+
+            // Handle Input Submission
+            const handleSubmit = () => {
+                // Don't play click here explicitly if button click already triggers global listener
+                // But logic requires it if triggered by "Enter" key
+                // We'll let global listener handle clicks, but play manually for Enter key
+                
+                const currentStep = STORY_STEPS[stepIndex];
+                const result = currentStep.checkAnswer(inputVal);
+
+                if (result.sound) {
+                    const snd = new Audio(result.sound);
+                    snd.play().catch(e => console.log(e));
+                }
+
+                setFeedback({ text: result.msg, title: result.msgTitle });
+                
+                if (currentStep.strict && !result.correct) {
+                    setShowNext(false); // Do not proceed
+                    // Input remains visible because we check !showNext
+                } else {
+                    setShowNext(true); // Allow proceed, input hides
+                }
+            };
+
+            const handleNext = () => {
+                if (stepIndex < STORY_STEPS.length - 1) {
+                    setStepIndex(prev => prev + 1);
+                } 
+                // Note: Final link handling is now done via button clicks in the render method for the final step
+            };
+
+            const currentStep = STORY_STEPS[stepIndex];
+
+            return (
+                <div className="min-h-screen flex items-center justify-center p-4">
+                    <div className="book-container w-full max-w-4xl h-[85vh] relative">
+                        {/* Book Binding Visuals */}
+                        <div className="absolute inset-y-0 left-1/2 w-4 bg-yellow-800 rounded-lg shadow-inner z-10 -ml-2 transform hidden md:block"></div>
+                        
+                        {/* The Page */}
+                        <div className={`book bg-amber-50 w-full h-full rounded-2xl shadow-2xl overflow-hidden border-8 border-yellow-700 flex flex-col md:flex-row ${flipClass}`}>
+                            
+                            {/* Left Page (Visuals) */}
+                            <div className="w-full md:w-1/2 p-6 border-b-4 md:border-b-0 md:border-r-4 border-yellow-200/50 flex flex-col items-center justify-center bg-yellow-50 relative">
+                                <h2 className="text-2xl md:text-3xl font-bold text-center text-purple-700 mb-4">{currentStep.title}</h2>
+                                {currentStep.image && (
+                                    <div className="w-full max-w-sm rounded-lg border-4 border-orange-400 overflow-hidden shadow-lg bg-white">
+                                        <img 
+                                            src={currentStep.image} 
+                                            alt="Scene" 
+                                            className="w-full h-64 object-cover"
+                                            onError={(e) => {
+                                                e.target.onerror = null; 
+                                                e.target.src = "https://placehold.co/600x400/orange/white?text=Dora+Image";
+                                            }}
+                                        />
+                                    </div>
+                                )}
+                                {!currentStep.image && (
+                                     <div className="flex-1 flex items-center justify-center text-orange-300 opacity-20">
+                                         <svg width="150" height="150" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                                     </div>
+                                )}
+                            </div>
+
+                            {/* Right Page (Interaction) */}
+                            <div className="w-full md:w-1/2 p-8 bg-white relative overflow-y-auto book-content">
+                                <div className="space-y-6 text-lg text-gray-800 leading-relaxed">
+                                    
+                                    {/* Main Text */}
+                                    <div className="bg-blue-50 p-4 rounded-xl border-l-4 border-blue-400">
+                                        <p className="whitespace-pre-line">{currentStep.text}</p>
+                                    </div>
+
+                                    {currentStep.subText && (
+                                        <div className="whitespace-pre-line italic text-gray-600">
+                                            {currentStep.subText}
+                                        </div>
+                                    )}
+
+                                    {currentStep.list && (
+                                        <ul className="list-disc pl-6 space-y-2 text-purple-700 font-bold">
+                                            {currentStep.list.map((item, i) => (
+                                                <li key={i}>{item}</li>
+                                            ))}
+                                        </ul>
+                                    )}
+
+                                    {/* FEEDBACK DISPLAY (Moved before input for better flow in error state) */}
+                                    {feedback && (
+                                        <div className={`mt-6 p-4 rounded-lg ${feedback.title === "¡Lo logramos!" ? "bg-green-100 border-green-500 text-green-800" : "bg-red-100 border-red-500 text-red-800"} border-2`}>
+                                            <p className="font-bold">{feedback.title || ""}</p>
+                                            <p>{feedback.text}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Interaction Areas */}
+                                    
+                                    {/* INPUT TYPE */}
+                                    {/* Logic Changed: Input shows if Next button is NOT showing (meaning not solved yet) OR if we are just providing feedback but need retry */}
+                                    {currentStep.type === "input" && !showNext && (
+                                        <div className="mt-6">
+                                            <input 
+                                                type="text" 
+                                                className="w-full p-3 border-2 border-purple-300 rounded-lg focus:border-purple-600 outline-none text-xl"
+                                                placeholder="Type your answer here..."
+                                                value={inputVal}
+                                                onChange={(e) => setInputVal(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        playClick();
+                                                        handleSubmit();
+                                                    }
+                                                }}
+                                            />
+                                            <button 
+                                                onClick={() => {
+                                                    // Global click handles sound, just submit
+                                                    handleSubmit();
+                                                }}
+                                                className="mt-3 bg-purple-600 text-white px-6 py-2 rounded-full font-bold hover:bg-purple-700 transition transform hover:scale-105"
+                                            >
+                                                Answer!
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* SEQUENCE BUTTONS TYPE */}
+                                    {currentStep.type === "sequence_buttons" && !showNext && (
+                                        <SequenceGame 
+                                            items={currentStep.buttons} 
+                                            onComplete={() => setShowNext(true)} 
+                                        />
+                                    )}
+
+                                    {/* MATCHING GAME TYPE */}
+                                    {currentStep.type === "matching" && !showNext && (
+                                        <MatchingGame 
+                                            matches={currentStep.matches}
+                                            onComplete={(msg) => {
+                                                setFeedback({ text: msg });
+                                                setShowNext(true);
+                                            }}
+                                        />
+                                    )}
+
+                                    {/* FINAL PAGE BUTTONS */}
+                                    {currentStep.type === "final" && (
+                                        <div className="mt-8 flex flex-col items-center space-y-8 pb-8">
+                                            {currentStep.buttons.map((btn, index) => (
+                                                <div key={index} className="w-full flex flex-col items-center">
+                                                    <p className="text-sm text-gray-500 mb-2 italic text-center max-w-sm px-4">
+                                                        {btn.desc}
+                                                    </p>
+                                                    <button 
+                                                        onClick={() => window.location.href = btn.link}
+                                                        className={`group relative inline-flex items-center justify-center px-8 py-3 text-lg font-bold text-white transition-all duration-200 font-pj rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-lg hover:scale-110 ${btn.color}`}
+                                                    >
+                                                        {btn.label}
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* NEXT BUTTON (Standard) */}
+                                    {(showNext || currentStep.type === "info") && currentStep.type !== "final" && (
+                                        <div className="mt-8 flex justify-end pb-8">
+                                            <button 
+                                                onClick={handleNext}
+                                                className="group relative inline-flex items-center justify-center px-8 py-3 text-lg font-bold text-white transition-all duration-200 bg-orange-500 font-pj rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-600 hover:bg-orange-600 transform hover:scale-110 shadow-lg"
+                                            >
+                                                Next ➤
+                                                <div className="absolute -top-3 -right-3 w-6 h-6 bg-yellow-400 rounded-full animate-ping opacity-75"></div>
+                                            </button>
+                                        </div>
+                                    )}
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Sub-Components ---
+
+        const SequenceGame = ({ items, onComplete }) => {
+            const [clicked, setClicked] = useState([]);
+            const [shakeIndex, setShakeIndex] = useState(-1);
+
+            const handleClick = (item, index) => {
+                // Check if this is the correct NEXT item in the sequence
+                // The correct next item should be items[clicked.length]
+                const expectedItem = items[clicked.length];
+
+                if (item === expectedItem) {
+                    // Correct!
+                    const newClicked = [...clicked, item];
+                    setClicked(newClicked);
+                    if (newClicked.length === items.length) {
+                        onComplete();
+                    }
+                } else {
+                    // Wrong order! Shake this button
+                    setShakeIndex(index);
+                    setTimeout(() => setShakeIndex(-1), 500);
+                }
+            };
+
+            return (
+                <div className="grid gap-3 mt-4">
+                    <p className="text-sm text-gray-500 italic mb-2">Click all of them in the correct order!</p>
+                    {items.map((item, index) => (
+                        <button
+                            key={item}
+                            onClick={() => handleClick(item, index)}
+                            disabled={clicked.includes(item)}
+                            className={`p-4 rounded-xl font-bold text-left transition-all ${
+                                clicked.includes(item) 
+                                ? "bg-green-500 text-white scale-95 opacity-50 cursor-not-allowed" 
+                                : "bg-white border-2 border-purple-400 text-purple-700 hover:bg-purple-50 shadow-md"
+                            } ${shakeIndex === index ? "shake bg-red-100 border-red-500" : ""}`}
+                        >
+                            {clicked.includes(item) ? "✓ " : ""}{item}
+                        </button>
+                    ))}
+                </div>
+            );
+        };
+
+        const MatchingGame = ({ matches, onComplete }) => {
+            // Simple approach: Display Left and Right columns. User clicks Left then Right.
+            const [selectedLeft, setSelectedLeft] = useState(null);
+            const [completed, setCompleted] = useState([]); // Array of IDs
+            const [shuffledRights, setShuffledRights] = useState([]);
+
+            useEffect(() => {
+                // Shuffle the definitions on mount
+                const rights = matches.map(m => ({ id: m.id, text: m.match }));
+                setShuffledRights(rights.sort(() => Math.random() - 0.5));
+            }, [matches]);
+
+            const handleLeftClick = (id) => {
+                if (!completed.includes(id)) setSelectedLeft(id);
+            };
+
+            const handleRightClick = (id) => {
+                if (selectedLeft) {
+                    if (selectedLeft === id) {
+                        // Match!
+                        const newCompleted = [...completed, id];
+                        setCompleted(newCompleted);
+                        setSelectedLeft(null);
+                        if (newCompleted.length === matches.length) {
+                            onComplete("Depending on where you want to go, one of these records will give your device the exact coordinates it needs.");
+                        }
+                    } else {
+                        // Wrong
+                        setSelectedLeft(null);
+                        // Optional: shake effect or error sound could go here
+                    }
+                }
+            };
+
+            return (
+                <div className="mt-4 select-none">
+                    <p className="text-sm text-gray-500 italic mb-4">Click an item on the left, then click its meaning on the right!</p>
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* Left Col */}
+                        <div className="flex flex-col space-y-2">
+                            {matches.map(m => (
+                                <div 
+                                    key={m.id}
+                                    onClick={() => handleLeftClick(m.id)}
+                                    className={`p-3 rounded border-2 cursor-pointer transition ${
+                                        completed.includes(m.id) ? "bg-gray-300 border-gray-400 text-gray-500" :
+                                        selectedLeft === m.id ? "bg-blue-100 border-blue-500 shadow-inner" : "bg-white border-blue-200 hover:bg-blue-50"
+                                    }`}
+                                >
+                                    {m.label}
+                                </div>
+                            ))}
+                        </div>
+                        {/* Right Col */}
+                        <div className="flex flex-col space-y-2">
+                            {shuffledRights.map(r => (
+                                <div 
+                                    key={r.id}
+                                    onClick={() => handleRightClick(r.id)}
+                                    className={`p-3 rounded border-2 cursor-pointer transition text-sm flex items-center h-full ${
+                                        completed.includes(r.id) ? "bg-green-100 border-green-500 text-green-800" :
+                                        "bg-white border-pink-200 hover:bg-pink-50"
+                                    }`}
+                                >
+                                    {r.text}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<AdventureBook />);
+    </script>
+</body>
+</html>

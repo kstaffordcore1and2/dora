@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Network Journey: From Startup to Destination</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --dora-purple: #7B3F97;
+            --dora-pink: #E53A87;
+            --dora-orange: #F68C2C;
+            --boots-blue: #4FBCEC;
+            --map-cream: #FDF8E2;
+            --nature-green: #8CC63F;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #C6E6FB; /* Sky blue background */
+            background-image: radial-gradient(#fff 20%, transparent 20%),
+                              radial-gradient(#fff 20%, transparent 20%);
+            background-position: 0 0, 50px 50px;
+            background-size: 100px 100px;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            color: #333;
+        }
+
+        header {
+            background-color: var(--dora-purple);
+            color: white;
+            padding: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            border-bottom: 5px solid var(--dora-orange);
+        }
+
+        h1 {
+            font-family: 'Fredoka One', cursive;
+            margin: 0;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 0px var(--dora-pink);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            border: 4px solid var(--dora-orange);
+        }
+
+        /* Video Styling */
+        .video-wrapper {
+            margin-bottom: 30px;
+            border: 5px solid var(--boots-blue);
+            border-radius: 15px;
+            overflow: hidden;
+            background: black;
+        }
+
+        video {
+            width: 100%;
+            display: block;
+        }
+
+        .instruction {
+            font-size: 1.2em;
+            color: var(--dora-purple);
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        /* Accordion Styling */
+        .accordion {
+            background-color: var(--nature-green);
+            color: white;
+            cursor: pointer;
+            padding: 18px;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 1.2em;
+            font-family: 'Fredoka One', cursive;
+            transition: 0.4s;
+            margin-top: 10px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+
+        .accordion:after {
+            content: '➕'; /* Plus sign */
+            font-size: 15px;
+            color: white;
+            margin-left: auto;
+        }
+
+        .accordion.active {
+            background-color: var(--dora-orange);
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+
+        .accordion.active:after {
+            content: "➖"; /* Minus sign */
+        }
+
+        .accordion:hover {
+            background-color: #7bb332;
+        }
+
+        .panel {
+            padding: 0 18px;
+            background-color: var(--map-cream);
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.2s ease-out;
+            text-align: left;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+            border: 2px solid var(--nature-green);
+            border-top: none;
+        }
+
+        .panel h3 {
+            color: var(--dora-purple);
+        }
+
+        .panel ul, .panel ol {
+            line-height: 1.6;
+        }
+
+        /* The Hidden Button */
+        #test-button-container {
+            margin-top: 40px;
+            height: 80px; /* Reserve space */
+        }
+
+        .start-btn {
+            display: none; /* Hidden initially */
+            background-color: var(--dora-pink);
+            color: white;
+            padding: 20px 40px;
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.5em;
+            text-decoration: none;
+            border-radius: 50px;
+            border: 4px solid white;
+            box-shadow: 0 5px 15px rgba(211, 80, 152, 0.6);
+            transition: transform 0.2s;
+            animation: bounce 2s infinite;
+        }
+
+        .start-btn:hover {
+            transform: scale(1.1);
+            background-color: #C72C75;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+            40% {transform: translateY(-10px);}
+            60% {transform: translateY(-5px);}
+        }
+
+        /* Decorative Icons */
+        .icon-marker {
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🎒 The Network Journey: From Startup to Destination 🗺️</h1>
+</header>
+
+<div class="container">
+
+    <p class="instruction">Hola! Watch the video and check the Map Locations to unlock the next step!</p>
+
+    <div class="video-wrapper">
+        <video id="gatekeeperVideo" controls>
+            <source src="The_Network_s_Gatekeepers.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+
+    <button class="accordion" id="btn1">
+        <span class="icon-marker">1️⃣</span> Phase 1: Obtaining the IP Address (DHCP)
+    </button>
+    <div class="panel">
+        <p>The device is configured to get its address automatically. This is managed by the <strong>Dynamic Host Configuration Protocol (DHCP)</strong>. This process is commonly known as <strong>DORA</strong>.</p>
+        <ol>
+            <li><strong>Discover (D):</strong> The client sends a broadcast (0.0.0.0) to find available DHCP servers.</li>
+            <li><strong>Relay Agent Role:</strong> If the DHCP server is across a router, a Relay Agent intercepts the broadcast and forwards it to the server.</li>
+            <li><strong>Offer (O):</strong> The DHCP server suggests an available IP address.</li>
+            <li><strong>Reservation Check:</strong> If configured, the server links the client's MAC address to a specific static IP.</li>
+            <li><strong>Request (R):</strong> The client accepts an offer and requests that address back from the server.</li>
+            <li><strong>Acknowledge (A):</strong> The server sends a final ACK. The device now has its IP identity!</li>
+        </ol>
+    </div>
+
+    <button class="accordion" id="btn2">
+        <span class="icon-marker">2️⃣</span> Phase 2: Maintaining the Address
+    </button>
+    <div class="panel">
+        <p>The assigned address is not permanent! It is held for a <strong>DHCP Lease</strong> duration.</p>
+        <ul>
+            <li><strong>Renewal:</strong> To keep the journey smooth, the client contacts the server (typically at 50% of lease time) to reset the timer.</li>
+            <li><strong>Release:</strong> If the client fails to contact the server for the whole period, the address is released and the client must request a new one later.</li>
+        </ul>
+    </div>
+
+    <button class="accordion" id="btn3">
+        <span class="icon-marker">3️⃣</span> Phase 3: Finding the Destination (DNS)
+    </button>
+    <div class="panel">
+        <p>With a valid IP, the device seeks its destination by translating names to IP addresses using the <strong>Domain Name System (DNS)</strong>.</p>
+        <ol>
+            <li><strong>DNS Resolution:</strong> You type a name (e.g., google.com), and the request goes to your local recursive resolver.</li>
+            <li><strong>DNS Hierarchical Search:</strong> If the resolver doesn't know the answer:
+                <ul>
+                    <li>It asks the <strong>Root Servers</strong> (Highest level).</li>
+                    <li>Root directs to <strong>TLD Servers</strong> (e.g., .com or .net).</li>
+                    <li>TLD directs to the <strong>Authoritative Name Server</strong> (The manager of that specific name).</li>
+                </ul>
+            </li>
+            <li><strong>DNS Records (The Final Answer):</strong> The authoritative server holds the records. 
+                <br><em>A Record</em> = IPv4 Address. 
+                <br><em>AAAA Record</em> = IPv6 Address.
+            </li>
+            <li><strong>Connecting:</strong> The IP address is returned to the client, and the connection is made!</li>
+        </ol>
+    </div>
+
+    <div id="test-button-container">
+        <a href="test.html" class="start-btn" id="knowledgeBtn">Test your knowledge! 🚀</a>
+    </div>
+
+</div>
+
+<script>
+    // State tracking variables
+    let videoWatched = false;
+    let phase1Open = false;
+    let phase2Open = false;
+    let phase3Open = false;
+
+    const videoElement = document.getElementById('gatekeeperVideo');
+    const btnTest = document.getElementById('knowledgeBtn');
+
+    // 1. Logic for Video Completion
+    videoElement.addEventListener('ended', function() {
+        videoWatched = true;
+        console.log("Video finished!");
+        checkCompletion();
+    });
+
+    // 2. Logic for Accordions
+    const acc = document.getElementsByClassName("accordion");
+    
+    for (let i = 0; i < acc.length; i++) {
+        acc[i].addEventListener("click", function() {
+            // Toggle active class visually
+            this.classList.toggle("active");
+            
+            // Toggle the panel visibility
+            var panel = this.nextElementSibling;
+            if (panel.style.maxHeight) {
+                panel.style.maxHeight = null;
+            } else {
+                panel.style.maxHeight = panel.scrollHeight + "px";
+            }
+
+            // Mark section as "Revealed" based on ID
+            if(this.id === 'btn1') phase1Open = true;
+            if(this.id === 'btn2') phase2Open = true;
+            if(this.id === 'btn3') phase3Open = true;
+
+            checkCompletion();
+        });
+    }
+
+    // 3. Check if everything is done
+    function checkCompletion() {
+        if (videoWatched && phase1Open && phase2Open && phase3Open) {
+            // We did it! Show the button.
+            btnTest.style.display = "inline-block";
+        }
+    }
+</script>
+
+</body>
+</html>
