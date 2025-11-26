@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Your Knowledge! - The Network Journey</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --dora-purple: #7B3F97;
+            --dora-pink: #E53A87;
+            --dora-orange: #F68C2C;
+            --boots-blue: #4FBCEC;
+            --map-cream: #FDF8E2;
+            --success-green: #8CC63F;
+            --error-red: #E74C3C;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #C6E6FB;
+            background-image: radial-gradient(#fff 20%, transparent 20%),
+                              radial-gradient(#fff 20%, transparent 20%);
+            background-position: 0 0, 50px 50px;
+            background-size: 100px 100px;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+            color: #333;
+        }
+
+        header {
+            background-color: var(--dora-purple);
+            color: white;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            border: 4px solid var(--dora-orange);
+            max-width: 800px;
+            margin: 0 auto 30px auto;
+        }
+
+        h1 {
+            font-family: 'Fredoka One', cursive;
+            margin: 0;
+            text-shadow: 2px 2px 0px var(--dora-pink);
+        }
+
+        .quiz-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 40px;
+            border-radius: 20px;
+            border: 5px solid var(--boots-blue);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .question-box {
+            background-color: var(--map-cream);
+            border: 2px solid var(--dora-orange);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        h3 {
+            color: var(--dora-purple);
+            margin-top: 0;
+        }
+
+        label {
+            display: block;
+            margin: 10px 0;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        label:hover {
+            background-color: #fcefd5;
+        }
+
+        input[type="radio"] {
+            margin-right: 10px;
+            transform: scale(1.2);
+        }
+
+        .submit-btn {
+            background-color: var(--dora-pink);
+            color: white;
+            padding: 15px 40px;
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.5em;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            border-bottom: 5px solid #C72C75;
+            transition: all 0.1s;
+            margin-top: 20px;
+        }
+
+        .submit-btn:active {
+            transform: translateY(4px);
+            border-bottom: none;
+        }
+
+        /* Results Section */
+        #result-container {
+            display: none; /* Hidden by default */
+            text-align: center;
+        }
+
+        .score-display {
+            font-size: 3em;
+            font-family: 'Fredoka One', cursive;
+            color: var(--dora-purple);
+            margin: 20px 0;
+        }
+
+        .message {
+            font-size: 1.5em;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+
+        .retry-btn {
+            background-color: var(--dora-orange);
+            color: white;
+            padding: 15px 30px;
+            font-family: 'Fredoka One', cursive;
+            border: none;
+            border-radius: 30px;
+            font-size: 1.2em;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        /* Elaborate Success Animation */
+        .confetti-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+        
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            animation: fall linear forwards;
+        }
+
+        @keyframes fall {
+            to { transform: translateY(100vh) rotate(720deg); }
+        }
+
+        .star {
+            font-size: 50px;
+            animation: spin 2s infinite linear;
+            display: inline-block;
+            color: gold;
+        }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+<div class="confetti-container" id="confetti-box"></div>
+
+<header>
+    <h1>🗺️ The Final Challenge! 🎒</h1>
+</header>
+
+<div class="quiz-container" id="quiz-box">
+    <form id="quizForm">
+        </form>
+    <button class="submit-btn" onclick="gradeQuiz()">Check My Journey!</button>
+</div>
+
+<div class="quiz-container" id="result-container">
+    <div id="result-icon" style="font-size: 80px;"></div>
+    <div class="score-display" id="score-text"></div>
+    <div class="message" id="message-text"></div>
+    <button class="retry-btn" id="action-btn" onclick="location.reload()">Try Again</button>
+
+    <div style="margin-top: 40px; border-top: 2px dashed #eee; padding-top: 20px; text-align: center;">
+        
+        <div style="margin-bottom: 25px;">
+            <p style="margin-bottom: 5px; font-weight: bold; color: var(--dora-purple);">This will take you back to relearning the more in depth content:</p>
+            <button class="retry-btn" onclick="window.location.href='indepth.html'" style="background-color: var(--boots-blue);">Refresh!</button>
+        </div>
+
+        <div style="margin-bottom: 25px;">
+            <p style="margin-bottom: 5px; font-weight: bold; color: var(--dora-purple);">This will take you all the way to reading Dora's Network Adventure book:</p>
+            <button class="retry-btn" onclick="window.location.href='../index.html'" style="background-color: var(--dora-purple);">Dora's Adventure Book</button>
+        </div>
+
+        <div style="margin-bottom: 10px;">
+            <p style="margin-bottom: 5px; font-weight: bold; color: var(--dora-purple);">This will let you practice what you just learned from Dora's Network Adventure book:</p>
+            <button class="retry-btn" onclick="window.location.href='../practice/practice.html'" style="background-color: var(--dora-orange);">Practice</button>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // The Question Data
+    const questions = [
+        {
+            q: "In the initial DHCP Discover phase, what source IP address does a client use in its broadcast packet?",
+            options: ["The client's unique MAC address", "255.255.255.255", "The router's default gateway address", "0.0.0.0"],
+            answer: 3
+        },
+        {
+            q: "Under what specific network topology circumstance is a DHCP Relay Agent essential for the DORA process to succeed?",
+            options: ["When the client's lease has expired.", "When the server uses reservations.", "When client and server are on different network segments (routers).", "When multiple clients request addresses."],
+            answer: 2
+        },
+        {
+            q: "What unique client identifier does a DHCP server use to map a specific, pre-determined IP address to a device via a DHCP Reservation?",
+            options: ["The OS type", "The previously assigned IP", "The client's hostname", "The MAC address"],
+            answer: 3
+        },
+        {
+            q: "In the DORA sequence, what action does the DHCP server take immediately after the client broadcasts a DHCP Request message?",
+            options: ["Sends a new Offer", "Sends a DHCP Acknowledgment (ACK)", "Checks configuration for Reservation", "Broadcasts a Discover message"],
+            answer: 1
+        },
+        {
+            q: "At what point during its lease duration does a client typically make its first attempt to renew the lease?",
+            options: ["At 50% of the lease duration", "When expired", "Immediately after ACK", "When 10% is remaining"],
+            answer: 0
+        },
+        {
+            q: "When a local recursive resolver receives a query for a domain name it has never seen before, where does it send its first request?",
+            options: ["Authoritative Name Server", "TLD Servers", "Root Servers", "DHCP Server"],
+            answer: 2
+        },
+        {
+            q: "What is the primary role of a Top-Level Domain (TLD) server within the DNS hierarchical search?",
+            options: ["Direct the query to the appropriate Authoritative Name Server", "Query Root Servers", "Cache DNS records", "Provide the A record"],
+            answer: 0
+        },
+        {
+            q: "A system administrator needs to ensure that 'portal.mycompany.com' resolves to the IPv6 address '2001:db8::1'. Which DNS record type should be created?",
+            options: ["AAAA record", "MX record", "CNAME record", "A record"],
+            answer: 0
+        },
+        {
+            q: "Which statement best describes the chronological relationship between DHCP and DNS when a new computer connects to a network?",
+            options: ["DHCP must complete before DNS resolution can begin", "They operate in parallel", "DNS is used to find DHCP", "DNS assigns IP, DHCP confirms"],
+            answer: 0
+        },
+        {
+            q: "How does a DHCP Request message functionally differ from a DHCP Discover message?",
+            options: ["Request selects a specific offer; Discover seeks any offer", "Request is unicast; Discover is broadcast", "Discover is from 0.0.0.0; Request is from offered IP", "Discover has MAC; Request does not"],
+            answer: 0
+        },
+        {
+            q: "What is the defining characteristic of an Authoritative Name Server?",
+            options: ["Refers queries to TLDs", "Maintains large cache", "First server queried by resolver", "Holds the master DNS records for a specific domain"],
+            answer: 3
+        },
+        {
+            q: "Under which scenario would a CNAME record be the appropriate choice instead of an A record?",
+            options: ["To point 'blog.company.com' to an external service name like 'provider.net'", "To point 'ftp' to same IP as 'www'", "For mail servers", "For IPv6 addresses"],
+            answer: 0
+        },
+        {
+            q: "At which specific point in the DORA process does the client's operating system officially bind the offered IP address?",
+            options: ["After receiving the DHCP Acknowledgment (ACK)", "After sending Request", "After receiving Offer", "After broadcasting Discover"],
+            answer: 0
+        },
+        {
+            q: "A laptop fails to renew its DHCP lease after multiple attempts. What happens when the lease expires?",
+            options: ["Contacts DNS for IP", "Releases address and must start DORA again", "Uses expired IP", "Server converts to reservation"],
+            answer: 1
+        },
+        {
+            q: "A recursive resolver queries Root Servers for 'login.portal.example.org'. Where is it directed next?",
+            options: ["Authoritative for 'example.org'", "TLD servers for '.org'", "Local DHCP", "Authoritative for 'portal'"],
+            answer: 1
+        },
+        {
+            q: "Why is the client's DHCP Request message often sent as a broadcast?",
+            options: ["To cross routers", "To implicitly inform other servers their offers were declined", "Client doesn't know MAC", "Protocol requirement"],
+            answer: 1
+        },
+        {
+            q: "How does a DHCP Reservation differ from a manually configured static IP?",
+            options: ["Static for servers only", "Reservation is on server; Static is on client", "Reservation is temporary", "Static uses DORA"],
+            answer: 1
+        },
+        {
+            q: "What is the primary purpose of an MX record?",
+            options: ["Identify email handling servers", "Create an alias", "List authoritative servers", "Map hostname to IPv4"],
+            answer: 0
+        },
+        {
+            q: "After a client's resolver obtains an IP from an authoritative server, what is the next step?",
+            options: ["TLD caches IP", "IP is returned to the client application", "Resolver confirms with server", "Client performs DHCP renewal"],
+            answer: 1
+        },
+        {
+            q: "A client at 50% of lease sends renewal but gets no response. What happens?",
+            options: ["Releases IP immediately", "Broadcasts Request", "Continues using IP and tries again later", "Stops communication"],
+            answer: 2
+        },
+        {
+            q: "What core networking problem is solved by DHCP?",
+            options: ["Eliminates manual IP configuration", "Discovers MAC addresses", "Forwards packets", "Translates names to IPs"],
+            answer: 0
+        },
+        {
+            q: "A client receives two valid DHCP Offers. What happens next?",
+            options: ["Chooses one and broadcasts Request", "Servers decide", "Waits for third offer", "Accepts both"],
+            answer: 0
+        },
+        {
+            q: "What is the relationship between a client's MAC address and a DHCP Offer?",
+            options: ["Client uses DNS for MAC", "Offer contains new MAC", "Client's MAC is included in the Offer so it knows it's for them", "Only specific vendors get offers"],
+            answer: 2
+        },
+        {
+            q: "Which component is ultimately responsible for holding the definitive A record for 'www.example.com'?",
+            options: ["Local resolver", "Root Server", "TLD Server", "Authoritative Name Server for 'example.com'"],
+            answer: 3
+        },
+        {
+            q: "What does the 'A' in the DORA acronym signify?",
+            options: ["Acknowledge", "Agent", "Address", "Authorize"],
+            answer: 0
+        }
+    ];
+
+    // Render the Quiz
+    const formContainer = document.getElementById('quizForm');
+    
+    questions.forEach((item, index) => {
+        const qDiv = document.createElement('div');
+        qDiv.classList.add('question-box');
+        
+        let html = `<h3>${index + 1}. ${item.q}</h3>`;
+        
+        item.options.forEach((opt, i) => {
+            html += `<label>
+                        <input type="radio" name="q${index}" value="${i}">
+                        ${opt}
+                     </label>`;
+        });
+        
+        qDiv.innerHTML = html;
+        formContainer.appendChild(qDiv);
+    });
+
+    function gradeQuiz() {
+        let score = 0;
+        let total = questions.length;
+        let answered = 0;
+
+        // Calculate Score
+        questions.forEach((item, index) => {
+            const radios = document.getElementsByName(`q${index}`);
+            let val = null;
+            for (const radio of radios) {
+                if (radio.checked) {
+                    val = parseInt(radio.value);
+                    answered++;
+                    break;
+                }
+            }
+            if (val === item.answer) {
+                score++;
+            }
+        });
+
+        // Calculate Percentage
+        let percentage = Math.round((score / total) * 100);
+
+        // Hide Quiz, Show Results
+        document.getElementById('quiz-box').style.display = 'none';
+        const resultContainer = document.getElementById('result-container');
+        resultContainer.style.display = 'block';
+        
+        const iconDiv = document.getElementById('result-icon');
+        const scoreText = document.getElementById('score-text');
+        const msgText = document.getElementById('message-text');
+        const actionBtn = document.getElementById('action-btn');
+
+        scoreText.innerText = percentage + "%";
+
+        if (percentage >= 91) {
+            // SUCCESS SCENARIO
+            document.body.style.backgroundColor = "#dcfccf"; // Light green bg
+            iconDiv.innerHTML = "🌟🏆🌟";
+            msgText.innerHTML = "Congratulations! Eres muy inteligente! You are very smart!<br>You have completed the Network Journey!";
+            msgText.style.color = "#2ecc71";
+            actionBtn.innerText = "Play Again";
+            startConfetti();
+        } else {
+            // FAIL SCENARIO
+            iconDiv.innerHTML = "🦊"; // Swiper/Fox icon
+            msgText.innerHTML = "Oh no! Swiper swiped your points! You need 91% to pass.<br>Don't give up! Vámonos! Let's try again!";
+            msgText.style.color = "#e74c3c";
+            actionBtn.innerText = "Try Questions Again";
+        }
+    }
+
+    // Confetti Animation Logic
+    function startConfetti() {
+        const colors = ['#f68c2c', '#e53a87', '#7b3f97', '#4fbcec', '#8cc63f'];
+        const container = document.getElementById('confetti-box');
+        container.style.display = 'block';
+
+        for (let i = 0; i < 100; i++) {
+            const div = document.createElement('div');
+            div.classList.add('confetti');
+            div.style.left = Math.random() * 100 + 'vw';
+            div.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            div.style.animationDuration = (Math.random() * 2 + 2) + 's';
+            container.appendChild(div);
+        }
+    }
+
+</script>
+
+</body>
+</html>
